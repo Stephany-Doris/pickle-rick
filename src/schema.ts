@@ -3,13 +3,28 @@ import { makeSchema, objectType, queryType } from "nexus";
 import { join } from "path";
 
 const Query = queryType({
-  definition(t) {
+  definition(t: {
+    list: {
+      field: (
+        arg0: string,
+        arg1: {
+          type: string;
+          args: { first: string };
+          resolve(_root: any, args: any, ctx: any): any;
+        }
+      ) => void;
+    };
+  }) {
     t.list.field("cats", {
       type: "Cat",
       args: {
         first: "Int",
       },
-      resolve(_root, args, ctx) {
+      resolve(
+        _root: any,
+        args: { first: any },
+        ctx: { prisma: { cat: { findMany: (arg0: { take: any }) => any } } }
+      ) {
         return ctx.prisma.cat.findMany({ take: args.first });
       },
     });
@@ -18,7 +33,10 @@ const Query = queryType({
 
 const Owner = objectType({
   name: "Owner",
-  definition(t) {
+  definition(t: {
+    int: (arg0: string) => void;
+    string: (arg0: string) => void;
+  }) {
     t.int("id");
     t.string("name");
     t.string("url");
@@ -27,7 +45,17 @@ const Owner = objectType({
 
 const Cat = objectType({
   name: "Cat",
-  definition(t) {
+  definition(t: {
+    int: (arg0: string) => void;
+    string: (arg0: string) => void;
+    field: (
+      arg0: string,
+      arg1: {
+        type: string;
+        resolve(cat: any, _args: any, ctx: any): Promise<any>;
+      }
+    ) => void;
+  }) {
     t.int("id");
     t.string("name");
     t.string("birthDate");
@@ -35,7 +63,15 @@ const Cat = objectType({
     t.string("imageUrl");
     t.field("owner", {
       type: "Owner",
-      async resolve(cat, _args, ctx) {
+      async resolve(
+        cat: { ownerId: any },
+        _args: any,
+        ctx: {
+          prisma: {
+            owner: { findFirst: (arg0: { where: { id: any } }) => any };
+          };
+        }
+      ) {
         const owner = await ctx.prisma.owner.findFirst({
           where: { id: cat.ownerId },
         });
